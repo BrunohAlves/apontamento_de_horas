@@ -17,7 +17,7 @@ Para utilizar esta ferramenta, é necessário ter acesso à API do Redmine. Voc�
 ### Arquivo CSV
 
 As informações no arquivo CSV devem estar no seguinte formato:
-issue_id,hours,comments,spent_on
+<br/>issue_id,hours,comments,spent_on<br/>
 id_do_ticket,01:30,teste,2023-10-03
 
 ### Configuração da Crontab
