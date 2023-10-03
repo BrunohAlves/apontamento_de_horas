@@ -2,6 +2,10 @@
 
 Este é um projeto para o apontamento de horas no Redmine através de um arquivo CSV.
 
+### Configuraçôes 
+
+Para instalar as dependências, basta executar o comando `bundle install` na raiz do repositório.
+
 ### API do Redmine
 
 Para utilizar esta ferramenta, é necessário ter acesso à API do Redmine. Você pode obtê-la em [https://endereço_do_redmine/my/account](https://endereço_do_redmine/my/account).
