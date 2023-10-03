@@ -27,6 +27,6 @@ Para configurar a tarefa na Crontab, siga os passos abaixo:
 1. Certifique-se de saber onde o Ruby está instalado executando o comando `which ruby`.
 2. Exemplo de entrada na Crontab:
 
-15 18 * * * /bin/bash -l -c 'cd /caminho_do_projeto && /caminho_do_ruby /caminho_do_arquivo_app.rb >> /caminho_para_arquivo_de_log 2>&1'
+15 18 * * * /bin/bash -l -c 'cd /caminho_do_projeto && /caminho_do_ruby /caminho_do_projeto/app.rb >> /caminho_para_arquivo_de_log 2>&1'
 
 Lembre-se de substituir os valores de exemplo pelos caminhos e configurações reais do seu ambiente.
