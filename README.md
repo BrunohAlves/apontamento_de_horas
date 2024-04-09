@@ -8,7 +8,7 @@ Para instalar as dependências, basta executar o comando `bundle install` na rai
 
 ### API do Redmine
 
-Para utilizar esta ferramenta, é necessário ter acesso à API do Redmine. Você pode obtê-la em [Aqui](https://endereço_do_redmine/my/account).
+Para utilizar esta ferramenta, é necessário ter acesso à API do Redmine. Você pode obtê-la [aqui](https://sh.autoseg.com/my/account).
 
 1. No menu do lado direito, clique em "Mostrar no bloco: Chave de Acesso API".
 2. A chave de acesso API deve ser adicionada ao arquivo `app.rb` no trecho onde está sendo instanciado o token.
@@ -16,9 +16,9 @@ Para utilizar esta ferramenta, é necessário ter acesso à API do Redmine. Voc�
 
 ### Clockify
 
-Para utilizar esta ferramenta, é necessário ter acesso ao Clockify. Você pode obtê-lo em [Aqui](https://app.clockify.me/tracker)
+Para utilizar esta ferramenta, é necessário ter acesso ao Clockify. Você pode obtê-lo [aqui](https://app.clockify.me/tracker)
 As informações necessárias do Clockify são:
-1. Chave da API - Obtida [Aqui](https://app.clockify.me/user/settings), no final da página.
+1. Chave da API - Obtida [aqui](https://app.clockify.me/user/settings), no final da página.
 2. E-mail utilizado para a conta.
 
 ### Configuração da Crontab
