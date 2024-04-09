@@ -27,7 +27,9 @@ Para configurar a tarefa na Crontab, siga os passos abaixo:
 
 1. Certifique-se de saber onde o Ruby está instalado executando o comando `which ruby`.
 2. No arquivo schedule.rb, deve ser adicionado o caminho do diretório onde o projeto está instalado, e o caminho onde o Ruby está instalado.
-3. Exemplo de entrada na Crontab:
+3. Após adicionado as informações corretas no schedule, basta executar o comando `whenever --update-crontab` na raiz do projeto, que o agendamento será adicionado.
+4. 
+5. Exemplo de entrada na Crontab:
 
 4 18 * * * /bin/bash -l -c 'cd ~/Documents/apontamento_de_horas && ~/.rbenv/shims/ruby ~/Documents/apontamento_de_horas/app.rb >> ~/Documents/apontamento_de_horas/logs/apontamento_de_horas.log 2>&1'
 
