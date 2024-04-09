@@ -1,27 +1,20 @@
-# frozen_string_literal: true
 require_relative "conector/RedmineConnector"
-require "csv"
+require_relative "conector/ClockifyConnector"
+require 'logger'
+require 'date'
 
-begin
-  api_key = 'your_token_api' # Substitua pela sua chave de API do Redmine
-  connector = RedmineConnector::Client.new(api_key)
+# Define o Logger
+logger = Logger.new(STDOUT)
+logger.datetime_format = '%Y-%m-%d %H:%M:%S'
 
-  relatorio_de_horas = CSV.table('csv/apontamento_de_horas.csv') # Retorna um Array de Arrays
+#Informações do Clockify
+api_key_clockify = 'your_clockify_api_key'
+email = 'your_email'
 
-  relatorio_de_horas.each do |horas|
-    issue_id = horas[:issue_id]
-    hours = horas[:hours]
-    comments = horas[:comments]
-    spent_on = horas[:spent_on]
+# Instancia o RedmineConnector::Client com o logger
+api_key_redmine = 'your_redmine_api_key' 
+connector = RedmineConnector::Client.new(api_key_clockify, api_key_redmine, email, logger)
 
-    response = connector.input_time_entry(issue_id, hours, comments, spent_on)
-    puts response
-  end
-
-  %x[cp csv/apontamento_de_horas_model.csv csv/apontamento_de_horas.csv]
-
-  created_on = "#{Date.today}"
-  connector.import_time_entries_by_created_on(created_on)
-rescue StandardError => e
-  puts "Erro ao importar time_entries: #{e.message}"
-end
+logger.info('Starting Job')
+response = connector.input_time_entry
+logger.info('Finishing Job')
