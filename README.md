@@ -21,6 +21,15 @@ As informações necessárias do Clockify são:
 1. Chave da API - Obtida [aqui](https://app.clockify.me/user/settings), no final da página.
 2. E-mail utilizado para a conta.
 
+### Lançamento de Horas no Clockify
+
+Dentro do Clockify, o Workspace e os lançamentos devem seguir os cseguintes critérios:
+* Nome do Workspace: Turia;
+* Lançamento das horas:
+  * Descrição da Atividade;
+  * Tempo de inicio e fim;
+  * Tag: Correspondente ao ID do Ticket no Redmine.
+
 ### Configuração da Crontab
 
 Para configurar a tarefa na Crontab, siga os passos abaixo:
