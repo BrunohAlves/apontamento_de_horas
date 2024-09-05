@@ -2,7 +2,7 @@
 
 Este é um projeto para o apontamento de horas no Redmine através de um arquivo CSV.
 
-### Configuraçôes 
+### Configurações
 
 Para instalar as dependências, basta executar o comando `bundle install` na raiz do repositório.
 
@@ -12,23 +12,25 @@ Para utilizar esta ferramenta, é necessário ter acesso à API do Redmine. Voc�
 
 1. No menu do lado direito, clique em "Mostrar no bloco: Chave de Acesso API".
 2. A chave de acesso API deve ser adicionada ao arquivo `app.rb` no trecho onde está sendo instanciado o token.
-3. Além disso, também é necessário adicionar o link do redmine no conector, onde está sendo instanciado para utilização da API.
+3. Além disso, também é necessário adicionar o link do redmine no connector, onde está sendo instanciado para utilização da API.
 
 ### Clockify
 
 Para utilizar esta ferramenta, é necessário ter acesso ao Clockify. Você pode obtê-lo [aqui](https://app.clockify.me/tracker)
 As informações necessárias do Clockify são:
-1. Chave da API - Obtida [aqui](https://app.clockify.me/user/settings), no final da página.
+
+1. Chave da API - Obtida [aqui](https://app.clockify.me/user/preferences#advanced), no final da página.
 2. E-mail utilizado para a conta.
 
 ### Lançamento de Horas no Clockify
 
-Dentro do Clockify, o Workspace e os lançamentos devem seguir os cseguintes critérios:
-* Nome do Workspace: Turia;
-* Lançamento das horas:
-  * Descrição da Atividade;
-  * Tempo de inicio e fim;
-  * Tag: Correspondente ao ID do Ticket no Redmine.
+Dentro do Clockify, o Workspace e os lançamentos devem seguir os seguintes critérios:
+
+- Nome do Workspace: Turia;
+- Lançamento das horas:
+  - Descrição da Atividade;
+  - Tempo de inicio e fim;
+  - Tag: Correspondente ao ID do Ticket no Redmine.
 
 ### Configuração da Crontab
 
@@ -39,6 +41,6 @@ Para configurar a tarefa na Crontab, siga os passos abaixo:
 3. Após adicionado as informações corretas no schedule, basta executar o comando `whenever --update-crontab` na raiz do projeto, que o agendamento será adicionado.
 4. Exemplo de entrada na Crontab:
 
-4 18 * * * /bin/bash -l -c 'cd ~/Documents/apontamento_de_horas && ~/.rbenv/shims/ruby ~/Documents/apontamento_de_horas/app.rb >> ~/Documents/apontamento_de_horas/logs/apontamento_de_horas.log 2>&1'
+4 18 \* \* \* /bin/bash -l -c 'cd ~/Documents/apontamento_de_horas && ~/.rbenv/shims/ruby ~/Documents/apontamento_de_horas/app.rb >> ~/Documents/apontamento_de_horas/logs/apontamento_de_horas.log 2>&1'
 
 Lembre-se de substituir os valores de exemplo pelos caminhos e configurações reais do seu ambiente.
