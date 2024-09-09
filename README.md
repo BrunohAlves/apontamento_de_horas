@@ -1,6 +1,6 @@
 # Apontamento de Horas
 
-Este é um projeto para o apontamento de horas no Redmine através de um arquivo CSV.
+Este é um projeto para o apontamento de horas no Redmine por meio da utilização do Clockify.
 
 ### Configurações
 
@@ -16,21 +16,25 @@ Para utilizar esta ferramenta, é necessário ter acesso à API do Redmine. Voc�
 
 ### Clockify
 
-Para utilizar esta ferramenta, é necessário ter acesso ao Clockify. Você pode obtê-lo [aqui](https://app.clockify.me/tracker)
+Para utilizar esta ferramenta, é necessário ter acesso ao Clockify.
+Você pode obtê-lo [aqui](https://app.clockify.me/tracker)
+
 As informações necessárias do Clockify são:
 
 1. Chave da API - Obtida [aqui](https://app.clockify.me/user/preferences#advanced), no final da página.
 2. E-mail utilizado para a conta.
+3. Você será incluído no Workspace de nome 'Turia', no qual os projetos dos clientes e as tarefas já existem.
 
 ### Lançamento de Horas no Clockify
 
 Dentro do Clockify, o Workspace e os lançamentos devem seguir os seguintes critérios:
 
 - Nome do Workspace: Turia;
+- Selecione o Projeto (Cliente);
+- Dentro do projeto, selecione a tarefa;
 - Lançamento das horas:
   - Descrição da Atividade;
-  - Tempo de inicio e fim;
-  - Tag: Correspondente ao ID do Ticket no Redmine.
+  - Tempo de inicio e fim.
 
 ### Configuração da Crontab
 

@@ -6,26 +6,26 @@ require_relative '../connector/clockify_connector'
 
 module ConnectorManager
   def self.get_redmine_connector(api_key_redmine, logger)
-    raise ArgumentError, 'API key is required' if api_key_redmine.nil?
+    raise ArgumentError, 'Chave da API Redmine é obrigatória' if api_key_redmine.nil?
 
     begin
       redmine_client = RedmineConnector::Client.new(api_key_redmine, logger)
 
-      logger.info 'Connected to Redmine successfully.'
+      logger.info 'Conectado ao Redmine com sucesso.'
       redmine_client
     rescue RedmineConnector::Error => e
-      logger.error "Error connecting to Redmine: #{e.message}"
+      logger.error "Erro ao conectar ao Redmine: #{e.message}"
       raise
     end
   end
 
   def self.get_clockify_connector(api_key_clockify, email, workspace_name, logger)
-    raise ArgumentError, 'API key is required' if api_key_clockify.nil?
+    raise ArgumentError, 'Chave da API Clockify é obrigatória' if api_key_clockify.nil?
 
     begin
       ClockifyConnector::Client.new(api_key_clockify, email, workspace_name, logger)
     rescue HTTParty::Error => e
-      logger.error "Error connecting to Clockify: #{e.message}"
+      logger.error "Erro ao conectar ao Clockify: #{e.message}"
       raise
     end
   end

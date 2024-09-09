@@ -11,17 +11,18 @@ def main
   api_key_redmine = 'd3bc111102694a9eeb2c9a874bc6edb602de44ed'
   email = 'raphael.costa@luizalabs.com'
   workspace_name = 'Turia'
+  days_ago = '7'
 
   begin
     clockify_connector = ConnectorManager.get_clockify_connector(api_key_clockify, email, workspace_name, logger)
     redmine_connector = ConnectorManager.get_redmine_connector(api_key_redmine, logger)
     differential_updater = DifferentialUpdater.new(redmine_connector, clockify_connector, logger)
 
-    logger.info('Starting Job')
-    differential_updater.sync_issues
-    # differential_updater.sync_time_entries
+    logger.info('Iniciando Execução')
+    differential_updater.update_clockify_projects_and_tasks
+    differential_updater.update_redmine_time_entries(days_ago)
   rescue StandardError => e
-    logger.error("Error during job execution: #{e.message}")
+    logger.error("Erro durante a execução: #{e.message}")
   end
 end
 
