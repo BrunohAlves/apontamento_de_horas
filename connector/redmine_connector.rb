@@ -52,25 +52,11 @@ module RedmineConnector
       issues
     end
 
-    # def get_existing_time_entries
-    #   @logger.info('Buscando entradas de tempo no Redmine...')
-    #   response = self.class.get('/time_entries.json', query: { key: @api_key_redmine })
-
-    #   if response.success?
-    #     @logger.info('Entradas de tempo existentes no Redmine obtidas com sucesso.')
-    #     response.parsed_response['time_entries'].map { |entry| entry['issue']['id'] }
-    #     # response.parsed_response.map { |entry| entry['issue_id'] } # ou o que for apropriado
-    #   else
-    #     @logger.error("Erro ao buscar entradas de tempo existentes: #{response.code}, #{response.parsed_response}")
-    #     raise
-    #   end
-    # end
-
     def get_existing_time_entries
-      @logger.info('Buscando entradas de tempo dos últimos 7 dias no Redmine...')
+      @logger.info('Buscando entradas de tempo no Redmine...')
 
-      # Definir a data de 7 dias atrás
-      from_date = (Date.today - 7).to_s
+      # Definir a data de 3 dias atrás
+      from_date = (Date.today - 3).to_s
 
       # Definir a data de hoje
       to_date = Date.today.to_s
@@ -81,7 +67,7 @@ module RedmineConnector
         from: from_date,
         to: to_date
       })
-      binding.pry
+      # binding.pry
 
       if response.success?
         @logger.info('Entradas de tempo existentes no Redmine obtidas com sucesso.')
@@ -126,21 +112,20 @@ module RedmineConnector
       end
     end
 
-    # def crea mine_time_entry(entry)
-    #   response = HTTParty.post("#{base_url}/time_entries.json",
-    #                            headers: { 'X-Redmine-API-Key' => api_key },
-    #                            body: {
-    #                              time_entry: {
-    #                                issue_id: entry.issue_id,
-    #                                hours: entry.hours,
-    #                                spent_on: entry.spent_on,
-    #                                comments: entry.description
-    #                              }
-    #                            }.to_json)
-    #   ErrorHandling.handle_error(response, @logger) unless response.success?
-    # end
+    def get_project_id_by_issue(issue_id)
+      # Realizar a requisição à API do Redmine para obter a issue específica
+      response = self.class.get("/issues/#{issue_id}.json", query: { key: @api_key_redmine })
 
-    # Método para tentativas de repetição de requisições
+      if response.success?
+        # Extrair o ID do projeto a partir da issue retornada
+        issue = response.parsed_response['issue']
+        return issue['project']['id'] if issue.present?
+      else
+        @logger.error("Erro ao obter detalhes da issue #{issue_id}: #{response.code}, #{response.parsed_response}")
+        raise StandardError, "Falha ao recuperar ID do projeto para a issue #{issue_id}"
+      end
+    end
+
     def with_retry(max_attempts = 3)
       attempts = 0
       begin

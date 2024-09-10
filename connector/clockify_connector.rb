@@ -164,6 +164,26 @@ module ClockifyConnector
       raise
     end
 
+    def get_tasks_for_project(project_id)
+      @logger.info("Buscando todas as tarefas do projeto no Clockify...")
+
+      response = self.class.get(
+        "/workspaces/#{@workspace_id}/projects/#{project_id}/tasks",
+        headers: headers
+      )
+
+      if response.success?
+        tasks = response.parsed_response
+        @logger.info("Tarefas obtidas com sucesso para o projeto.")
+        return tasks
+      else
+        ErrorHandling.handle_error(response, @logger)
+      end
+    rescue StandardError => e
+      @logger.error("Erro ao buscar tarefas no Clockify: #{e.message}")
+      raise
+    end
+
     def create_task(project_id, task_name)
       @logger.info("Criando tarefa no Clockify com o nome '#{task_name}'...")
 
@@ -217,27 +237,31 @@ module ClockifyConnector
       raise
     end
 
-    def get_clockify_time_entries(days_ago)
+    def get_clockify_time_entries_for_user(user_id, days_ago)
       raise ArgumentError, "O número de dias deve ser um inteiro positivo" unless days_ago.is_a?(Integer) && days_ago > 0
 
       # Calcula as datas de início e fim, considerando apenas os dias
-      today = Date.today
-      start_date = (today - days_ago).to_s
-      end_date = today.to_s
+      today = Time.now.utc
+      start_date = (today - days_ago * 86400).iso8601  # Calcula 'days_ago' dias atrás
+      end_date = today.iso8601  # Data de hoje
 
-      # Constrói a query para a API do Clockify
-      query = { start: start_date, end: end_date }
+      # Parâmetros da query
+      query = {
+        start: start_date,
+        end: end_date,
+        page: 1,
+        page_size: 1000
+      }
 
       # Faz a requisição à API
-      response = self.class.get("/workspaces/#{@workspace_id}/time-entries/status/in-progress", headers: headers, query: query)
+      response = self.class.get("/workspaces/#{@workspace_id}/user/#{user_id}/time-entries", headers: headers, query: query)
 
       # Verifica se a requisição foi bem-sucedida
       if response.success?
         data = JSON.parse(response.body)
-
         if data.is_a?(Array)
-          @logger.info("Entradas de tempo do Clockify obtidas com sucesso")
-          return JSON.parse(response.body)
+          @logger.info("Entradas de tempo do usuário #{user_id} obtidas com sucesso")
+          return data
         else
           ErrorHandling.handle_error(response, @logger)
         end
@@ -245,7 +269,7 @@ module ClockifyConnector
         ErrorHandling.handle_error(response, @logger)
       end
     rescue StandardError => e
-      @logger.error("Erro ao buscar entradas de tempo no Clockify: #{e.message}")
+      @logger.error("Erro ao buscar entradas de tempo no Clockify para o usuário #{user_id}: #{e.message}")
       raise
     end
 
