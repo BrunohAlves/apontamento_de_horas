@@ -1,19 +1,21 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    csv (3.2.7)
+    chronic (0.10.2)
     httparty (0.21.0)
       mini_mime (>= 1.0.0)
       multi_xml (>= 0.5.2)
     mini_mime (1.1.5)
     multi_xml (0.6.0)
+    whenever (1.0.0)
+      chronic (>= 0.6.3)
 
 PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
-  csv
   httparty
+  whenever
 
 BUNDLED WITH
-   2.3.26
+   2.4.11
