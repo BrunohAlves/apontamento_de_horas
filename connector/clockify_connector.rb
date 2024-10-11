@@ -1,181 +1,143 @@
+# encoding: UTF-8
 require 'httparty'
 require 'logger'
 require 'date'
 require_relative '../support/error_handling'
 
-require 'pry'
-
 module ClockifyConnector
   class Client
     include HTTParty
     extend ErrorHandling
+    attr_reader :workspace_id
 
     base_uri 'https://api.clockify.me/api/v1'
 
     def initialize(api_key_clockify, email, workspace_name, logger)
       @logger = logger
       @api_key_clockify = api_key_clockify
-      @workspace_id = get_workspace_id(workspace_name)
-      @logger.info("Chamada para find_user_id_by_email com o e-mail '#{email}'")
+      @workspace_name = workspace_name
+      @workspace_id = '63fe21bea094e40fbee3b92e'
+      # binding.pry
+      # @workspace_id = get_workspace_id_by_name(workspace_name)
       @user_id_clockify = find_user_id_by_email(email)
-    end
-
-    def headers
-      {
-        'X-Api-Key' => @api_key_clockify,
-        'Content-Type' => 'application/json'
-      }
-    end
-
-    def get_workspace_id(workspace_name)
-      @logger.info("Obtendo o ID do workspace '#{workspace_name}'...")
-      response = self.class.get('/workspaces', headers: headers)
-
-      if response.success?
-        workspaces = response.parsed_response
-        workspace = workspaces.find { |ws| ws['name'] == workspace_name }
-
-        if workspace
-          @logger.info("Workspace '#{workspace_name}' encontrado com ID '#{workspace['id']}'.")
-          workspace['id']
-        else
-          @logger.error("Workspace '#{workspace_name}' não encontrado.")
-          raise "Workspace '#{workspace_name}' não encontrado."
-          ErrorHandling.handle_error(response, @logger)
-        end
-      else
-        ErrorHandling.handle_error(response, @logger)
-      end
+      @projects_cache = {}
+      # @headers = RequestHeaders.clockify_headers(api_key_clockify)
     end
 
     def find_user_id_by_email(email)
       @logger.info("Procurando usuário pelo e-mail '#{email}'...")
+      users = list_users(@workspace_id)
+      user = users.find { |u| u['email'] == email }
 
-      begin
-        users = list_users(@workspace_id)
-        user = users.find { |user| user['email'] == email }
+      raise "Usuário com o e-mail '#{email}' não encontrado no workspace #{@workspace_id}." unless user
 
-        raise "Usuário com o e-mail '#{email}' não encontrado no workspace #{@workspace_id}." unless user
-
-        @logger.info("Usuário encontrado: #{user['id']}")
-        user['id']
-      rescue StandardError => e
-        @logger.error("Erro ao buscar o usuário: #{e.message}")
-        raise
-      end
+      @logger.info("Usuário encontrado: #{user['id']}")
+      user['id']
     end
 
     def list_users(workspace_id)
       @logger.info("Listando usuários no workspace '#{workspace_id}'...")
+      response = self.class.get("/workspaces/#{workspace_id}/users", headers: {
+        'X-Api-Key' => @api_key_clockify,
+        'Content-Type' => 'application/json'
+      })
 
-      begin
-        response = self.class.get("/workspaces/#{workspace_id}/users", headers: headers)
-
-        return response.parsed_response if response.success?
-
-        ErrorHandling.handle_error(response, @logger)
-      rescue StandardError => e
-        @logger.error("Erro ao listar usuários: #{e.message}")
-        raise
-      end
+      response.success? ? response.parsed_response : ErrorHandling.handle_error(response, @logger)
+    rescue StandardError => e
+      @logger.error("Erro ao listar usuários: #{e.message}")
+      raise
     end
 
-    def get_project_by_name(project_name)
-      @logger.info("Procurando projeto no Clockify com o nome '#{project_name}'...")
+    def get_all_projects(workspace_id)
+      @logger.info("Buscando todos os projetos no Clockify para o workspace #{@workspace_name}...")
 
-      response = self.class.get(
-        "/workspaces/#{@workspace_id}/projects",
-        headers: headers,
-        query: { name: project_name }
-      )
+      response = self.class.get("/workspaces/#{workspace_id}/projects",
+                                query: { 'page-size' => 1000 },
+                                headers: { 'X-Api-Key' => @api_key_clockify, 'Content-Type' => 'application/json' })
+
 
       if response.success?
-        projects = response.parsed_response
-        project = projects.find { |proj| proj['name'].casecmp(project_name).zero? }
-        if project
-          @logger.info("Projeto '#{project_name}' encontrado no Clockify: ID '#{project['id']}'")
-          return project
-        else
-          @logger.info("Projeto '#{project_name}' não encontrado no Clockify.")
-          return nil
-        end
+        @logger.info("Projetos obtidos com sucesso.")
+        return response.parsed_response
       else
+        @logger.error("Erro ao buscar projetos no Clockify: #{response.code} - #{response.body}")
         ErrorHandling.handle_error(response, @logger)
       end
     rescue StandardError => e
-      @logger.error("Erro ao buscar projeto no Clockify: #{e.message}")
+      @logger.error("Erro ao buscar projetos: #{e.message}")
       raise
     end
 
     def create_project(project_name)
-      raise ArgumentError, "O nome do projeto não pode ser vazio" if project_name.blank?
-      @logger.info("Criando novo projeto no Clockify com o nome '#{project_name}'...")
+      @logger.info("Criando projeto '#{project_name}' no Clockify...")
 
-      with_retry do
-        response = self.class.post(
-          "/workspaces/#{@workspace_id}/projects",
-          headers: headers,
-          body: {
-            name: project_name,
-            isPublic: false,
-            billable: true,  # Supondo que o projeto seja faturável
-            color: "#000000",  # Cor padrão, você pode modificar
-            memberships: []    # Pode adicionar membros aqui, se necessário
-          }.to_json
-        )
-
-        if response.success?
-          project = response.parsed_response
-          @logger.info("Projeto '#{project_name}' criado com sucesso no Clockify: ID '#{project['id']}'")
-          return project
-        else
-          @logger.error("Falha ao criar o projeto '#{project_name}' no Clockify: #{response.code} - #{response.message}")
-          ErrorHandling.handle_error(response, @logger)
-        end
-      rescue StandardError => e
-        @logger.error("Erro ao criar o projeto '#{project_name}' no Clockify: #{e.message}")
-        raise
-      end
-    end
-
-    def get_task_by_name(project_id, task_name)
-      @logger.info("Procurando tarefa no Clockify com o nome '#{task_name}'...")
-
-      response = self.class.get(
-        "/workspaces/#{@workspace_id}/projects/#{project_id}/tasks",
-        headers: headers,
-        query: { name: task_name }
+      response = self.class.post(
+        "/workspaces/#{@workspace_id}/projects",
+        headers: { 'X-Api-Key' => @api_key_clockify, 'Content-Type' => 'application/json' },
+        body: { name: project_name, isPublic: false }.to_json # Adicione outras propriedades necessárias, se for o caso
       )
+
       if response.success?
-        tasks = response.parsed_response
-        task = tasks.find { |t| t['name'].casecmp(task_name).zero? }
-        if task
-          @logger.info("Tarefa encontrada no Clockify: ID '#{task['id']}'")
-          return task
-        else
-          @logger.info("Tarefa '#{task_name}' não encontrada no Clockify.")
-          return nil
-        end
+        @logger.info("Projeto '#{project_name}' criado com sucesso no Clockify.")
+        response.parsed_response # Retorna a resposta da API com os dados do projeto criado
       else
         ErrorHandling.handle_error(response, @logger)
       end
     rescue StandardError => e
-      @logger.error("Erro ao buscar tarefa no Clockify: #{e.message}")
+      @logger.error("Erro ao criar projeto '#{project_name}' no Clockify: #{e.message}")
       raise
     end
 
+
+    def get_project_by_name(project_name)
+      @logger.info("Procurando projeto no Clockify com o nome '#{project_name}'...")
+
+      projects = get_all_projects(@workspace_id)
+      project = projects.find { |proj| proj['name'].casecmp(project_name).zero? }
+
+      if project
+        @projects_cache[project['id']] ||= project['name']
+        project
+      else
+        @logger.error("Projeto '#{project_name}' não encontrado.")
+        nil
+      end
+    end
+
+    def project_name(project_id)
+      return 'N/A' unless project_id
+
+      @projects_cache[project_id] ||= get_project_by_id(project_id)['name']
+    end
+
+    def get_task_name_from_clockify(task_id, project_id)
+      @logger.info("Buscando nome da tarefa #{task_id} no projeto #{project_id}...")
+      tasks = get_tasks_for_project(project_id)
+      task = tasks.find { |t| t['id'] == task_id }
+      task ? task['name'] : 'Tarefa não encontrada'
+    end
+
+    # Função para obter o nome da tarefa no Clockify
     def get_tasks_for_project(project_id)
-      @logger.info("Buscando todas as tarefas do projeto no Clockify...")
+      @logger.info("   Buscando todas as tarefas do projeto no Clockify...")
 
       response = self.class.get(
         "/workspaces/#{@workspace_id}/projects/#{project_id}/tasks",
-        headers: headers
-      )
+        headers: { 'X-Api-Key': @api_key_clockify, 'Content-Type': 'application/json' })
 
       if response.success?
-        tasks = response.parsed_response
-        @logger.info("Tarefas obtidas com sucesso para o projeto.")
-        return tasks
+        tasks = response.parsed_response.map do |task|
+          task['name'] = task['name'].force_encoding('UTF-8') # Aplicar codificação UTF-8
+          task
+        end
+
+        if tasks.empty?
+          @logger.error("Nenhuma tarefa encontrada para o projeto #{project_id}")
+          return []
+        end
+
+        @logger.info("    Tarefas obtidas com sucesso para o projeto.")
+        tasks
       else
         ErrorHandling.handle_error(response, @logger)
       end
@@ -184,68 +146,130 @@ module ClockifyConnector
       raise
     end
 
-    def create_task(project_id, task_name)
-      @logger.info("Criando tarefa no Clockify com o nome '#{task_name}'...")
+    def create_task(project_id, task_name, redmine_issue)
+      @logger.info("Criando nova tarefa no projeto #{project_id} com o nome '#{task_name}'")
 
-      with_retry do
-        response = self.class.post(
-          "/workspaces/#{@workspace_id}/projects/#{project_id}/tasks",
-          headers: headers,
-          body: {
-            name: task_name,
-            assigneeIds: [@user_id_clockify],
-          }.to_json
-        )
+      issue_id = redmine_issue['id']
 
-        if response.success?
-          @logger.info("Tarefa '#{task_name}' criada com sucesso no Clockify.")
-        else
-          @logger.error("Falha ao criar a tarefa '#{task_name}' no Clockify: #{response.code} - #{response.message}")
-          ErrorHandling.handle_error(response, @logger)
-        end
+      # Verifica se o issue_id já está presente no nome da tarefa
+      unless task_name.match(/^\[#{issue_id}\]/)
+        task_name = "[#{issue_id}] #{task_name}"  # Adiciona o issue_id ao nome da tarefa
       end
-    rescue StandardError => e
-      @logger.error("Erro ao criar a tarefa '#{task_name}' no Clockify: #{e.message}")
-      @logger.info("Continuando a execução após tentativa de criação da tarefa.")
-      raise
-    end
 
-    def task_exists?(issue)
-      response = HTTParty.get("#{base_url}/workspaces/#{workspace_id}/projects/#{project_id}/tasks",
-                              headers: { 'X-Api-Key' => api_key })
-      tasks = JSON.parse(response.body)
-      tasks.any? { |task| task['name'] == issue.subject }
-    end
+      # Mapeia o status do Redmine para o Clockify
+      redmine_status = redmine_issue.dig('status', 'name') || 'Em Andamento'
+      status_mapping = {
+        'Novo' => 'ACTIVE',
+        'Aguardando resposta' => 'ACTIVE',
+        'Em Andamento' => 'ACTIVE',
+        'Resolvendo' => 'ACTIVE',
+        'Concluído' => 'DONE',
+        'Permanente' => 'ACTIVE',  # Mapeia "Permanente" para "ACTIVE"
+        # Adicione outros mapeamentos conforme necessário
+      }
+      status = status_mapping[redmine_status] || 'ACTIVE'
 
-    def get_all_tasks(workspace_id)
-      @logger.info("Buscando tarefas do Clockify para o workspace ID: #{workspace_id}...")
+      # Força a codificação das strings para UTF-8
+      task_name = task_name.force_encoding('UTF-8')
+      description = redmine_issue['description'] ? redmine_issue['description'].force_encoding('UTF-8') : nil
 
-      response = HTTParty.get(
-        "https://api.clockify.me/api/v1/workspaces/#{workspace_id}/projects/#{project_id}/tasks",
-        headers: { 'X-Api-Key' => api_key }
+      # Loga as codificações para diagnóstico
+      @logger.debug("Encoding do nome da tarefa: #{task_name.encoding}")
+      @logger.debug("Encoding da descrição: #{description.encoding}") if description
+
+      # Monta os dados da tarefa para a API do Clockify
+      task_data = {
+        name: task_name,
+        assigneeIds: [@user_id_clockify],
+        status: status
+      }
+
+      task_data[:description] = description if description.present?
+
+      @logger.debug("Dados da tarefa a serem enviados: #{task_data}")
+
+      # Faz a requisição para criar a tarefa no Clockify
+      response = self.class.post(
+        "/workspaces/#{@workspace_id}/projects/#{project_id}/tasks",
+        headers: { 'X-Api-Key' => @api_key_clockify, 'Content-Type' => 'application/json' },
+        body: task_data.to_json
       )
 
-      ErrorHandling.handle_error(response, @logger) unless response.success?
-
-      JSON.parse(response.body)
-
-    rescue ErrorHandling::RequestError => e
-      @logger.error("Falha ao buscar tarefas do Clockify: #{e.message}")
-      raise
-    rescue StandardError => e
-      @logger.error("Erro inesperado ao buscar tarefas do Clockify: #{e.message}")
-      raise
+      if response.success?
+        @logger.info("Tarefa '#{task_name}' criada com sucesso no Clockify.")
+      else
+        @logger.error("Erro ao criar a tarefa '#{task_name}' no Clockify: Código #{response.code}, Resposta: #{response.body}")
+        ErrorHandling.handle_error(response, @logger)
+      end
     end
 
-    def get_clockify_time_entries_for_user(user_id, days_ago)
-      raise ArgumentError, "O número de dias deve ser um inteiro positivo" unless days_ago.is_a?(Integer) && days_ago > 0
+    def get_task(project_id, task_id)
+      response = self.class.get(
+        "/workspaces/#{@workspace_id}/projects/#{project_id}/tasks/#{task_id}",
+        headers: { 'X-Api-Key' => @api_key_clockify }
+      )
 
-      # Calcula as datas de início e fim, considerando apenas os dias
-      today = Time.now.utc
-      start_date = (today - days_ago * 86400).iso8601  # Calcula 'days_ago' dias atrás
-      end_date = today.iso8601  # Data de hoje
+      if response.success?
+        response.parsed_response
+      else
+        @logger.error("Erro ao obter a tarefa com ID #{task_id}: Código #{response.code}, Resposta: #{response.body}")
+        nil
+      end
+    end
 
-      # Parâmetros da query
+    def update_task(project_id, task_id, task_data)
+      @logger.info("Atualizando tarefa no projeto #{project_id} com os novos dados: #{task_data}")
+
+      # Construir o corpo da requisição com os dados atualizados
+      body = task_data.to_json
+
+      response = self.class.put(
+        "/workspaces/#{@workspace_id}/projects/#{project_id}/tasks/#{task_id}",
+        headers: { 'X-Api-Key' => @api_key_clockify, 'Content-Type' => 'application/json' },
+        body: body
+      )
+
+      if response.success?
+        @logger.info("Tarefa '#{task_data['name']}' atualizada com sucesso no Clockify.")
+      else
+        ErrorHandling.handle_error(response, @logger)
+      end
+    end
+
+    # Método para verificar se qualquer campo relevante da issue mudou
+    def task_needs_update?(existing_task, redmine_issue)
+      issue_id = redmine_issue['id']
+      redmine_task_name = "[#{issue_id}] #{redmine_issue['subject']}" # Nome no formato [issue_id] Nome da tarefa
+      redmine_description = redmine_issue['description']
+      redmine_assigned_to = redmine_issue.dig('assigned_to', 'name')
+      redmine_status = redmine_issue.dig('status', 'name')
+
+      # Verifica se o nome da tarefa ou outros campos importantes mudaram
+      existing_task_name = existing_task['name']
+      existing_description = existing_task['description'] # Supondo que você guarde a descrição no Clockify
+      existing_assigned_to = existing_task.dig('assignee', 'name')
+      existing_status = existing_task['status']
+
+      return true if existing_task_name != redmine_task_name
+      return true if existing_description != redmine_description
+      return true if existing_assigned_to != redmine_assigned_to
+      return true if existing_status != redmine_status
+
+      false
+    end
+
+
+    def find_task_in_clockify(task_name, project_id)
+      @logger.info("Buscando tarefa '#{task_name}' no Clockify para o projeto '#{project_id}'")
+
+      tasks = self.get_tasks_for_project(project_id)
+
+      tasks.find { |task| task['name'] == task_name }
+    end
+
+    def get_clockify_time_entries_for_user(user_id)
+      start_date = Time.new(2024, 10, 11).utc.iso8601
+      end_date = Time.now.utc.iso8601  # Data final será a data e hora atual
       query = {
         start: start_date,
         end: end_date,
@@ -253,73 +277,30 @@ module ClockifyConnector
         page_size: 1000
       }
 
-      # Faz a requisição à API
-      response = self.class.get("/workspaces/#{@workspace_id}/user/#{user_id}/time-entries", headers: headers, query: query)
+      response = self.class.get("/workspaces/#{@workspace_id}/user/#{user_id}/time-entries",  headers: {
+        'X-Api-Key' => @api_key_clockify,
+        'Content-Type' => 'application/json'
+      }, query: query)
 
-      # Verifica se a requisição foi bem-sucedida
       if response.success?
         data = JSON.parse(response.body)
-        if data.is_a?(Array)
-          @logger.info("Entradas de tempo do usuário #{user_id} obtidas com sucesso")
-          return data
-        else
-          ErrorHandling.handle_error(response, @logger)
+
+        # Filtrando as entradas que possuem projectId
+        filtered_data = data.select { |entry| entry['projectId'].present? }
+
+        if filtered_data.empty?
+          @logger.warn("Nenhuma entrada de tempo com projectId foi encontrada para o usuário #{user_id}.")
+          return []
         end
+
+        @logger.info("Entradas de tempo com projectId do usuário #{user_id} obtidas com sucesso")
+        filtered_data
       else
         ErrorHandling.handle_error(response, @logger)
       end
     rescue StandardError => e
       @logger.error("Erro ao buscar entradas de tempo no Clockify para o usuário #{user_id}: #{e.message}")
       raise
-    end
-
-    def update_task_by_id(task_id, new_name, new_description)
-      @logger.info("Atualizando tarefa com ID #{task_id} no Clockify...")
-
-      response = self.class.put(
-        "/workspaces/#{@workspace_id}/tasks/#{task_id}",
-        headers: headers,
-        body: {
-          name: new_name,
-          description: new_description
-        }.to_json
-      )
-
-      if response.success?
-        @logger.info("Tarefa com ID #{task_id} atualizada com sucesso.")
-      else
-        ErrorHandling.handle_error(response, @logger)
-      end
-    rescue StandardError => e
-      @logger.error("Erro ao atualizar tarefa no Clockify: #{e.message}")
-      raise
-    end
-
-    def list_time_entries
-      @logger.info("Listando entradas de tempo no workspace '#{@workspace_id}'...")
-      begin
-        response = self.class.get("/workspaces/#{@workspace_id}/time-entries/status/in-progress", headers: headers)
-
-        return response.parsed_response if response.success?
-
-        ErrorHandling.handle_error(response, @logger)
-      rescue StandardError => e
-        @logger.error("Erro ao listar entradas de tempo: #{e.message}")
-        raise
-      end
-    end
-
-    def with_retry(max_attempts = 3)
-      attempts = 0
-      begin
-        attempts += 1
-        yield
-      rescue StandardError => e
-        raise e unless attempts < max_attempts
-
-        puts "Tentativa #{attempts} falhou, tentando novamente..."
-        retry
-      end
     end
   end
 end
