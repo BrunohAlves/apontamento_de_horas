@@ -8,7 +8,7 @@ module RedmineConnector
   class Client
     extend ErrorHandling
     include HTTParty
-    base_uri 'https://redmine-qa.autoseg.com'
+    base_uri 'https://sh.autoseg.com'
 
     def initialize(api_key_redmine, clockify_connector, logger)
       @api_key_redmine = api_key_redmine
@@ -23,7 +23,7 @@ module RedmineConnector
       invalid_tasks = []  # Armazenar tarefas sem issue_id
       page = 1
       per_page = 10
-      data_corte = '2024-10-11'
+      data_corte = '2024-09-15'
       retrieved_issues = []
 
       begin
@@ -74,7 +74,7 @@ module RedmineConnector
     def get_existing_time_entries
       @logger.info('Buscando entradas de tempo no Redmine...')
 
-      from_date = '2024-10-11'
+      from_date = '2024-10-14'
       to_date = Date.today.to_s
 
       response = self.class.get('/time_entries.json', query: {

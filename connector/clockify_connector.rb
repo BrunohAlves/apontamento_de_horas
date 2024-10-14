@@ -268,7 +268,7 @@ module ClockifyConnector
     end
 
     def get_clockify_time_entries_for_user(user_id)
-      start_date = Time.new(2024, 10, 11).utc.iso8601
+      start_date = Time.new(2024, 10, 14).utc.iso8601
       end_date = Time.now.utc.iso8601  # Data final será a data e hora atual
       query = {
         start: start_date,
